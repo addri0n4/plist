@@ -1,101 +1,170 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Playlistismo Player</title>
-  <style>
-    body {
-      background: #0e0e0e;
-      color: #eee;
-      font-family: "Helvetica Neue", sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    #player {
-      width: 80%;
-      height: 450px;
-      margin-bottom: 20px;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      width: 80%;
-      max-height: 250px;
-      overflow-y: auto;
-      background: #1a1a1a;
-      border-radius: 12px;
-    }
-    li {
-      padding: 10px 15px;
-      border-bottom: 1px solid #333;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    li:hover {
-      background: #292929;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playlistismo TV</title>
+
+<style>
+body {
+  background: radial-gradient(circle at center, #000 60%, #111);
+  color: white;
+  font-family: 'Helvetica Neue', sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 30px;
+}
+
+h1 {
+  margin-bottom: 40px;
+  letter-spacing: 2px;
+  font-weight: 300;
+}
+
+#player-container {
+  position: relative;
+  width: 80%;
+  max-width: 900px;
+  height: 480px;
+  margin: 0 auto 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: black;
+  box-shadow: 0 0 40px rgba(0,0,0,0.9);
+}
+
+#player {
+  width: 100%;
+  height: 100%;
+}
+
+#credits {
+  position: absolute;
+  bottom: 10%;
+  left: 5%;
+  color: white;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+#credits.show {
+  opacity: 1;
+}
+
+#tv-controls {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-top: 15px;
+}
+
+#tv-controls button {
+  background: linear-gradient(180deg, #444, #111);
+  color: white;
+  border: none;
+  padding: 14px 18px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: transform 0.2s, background 0.3s;
+}
+
+#tv-controls button:hover {
+  background: linear-gradient(180deg, #666, #222);
+  transform: scale(1.1);
+}
+</style>
 </head>
+
 <body>
-  <div id="player"></div>
-  <ul id="playlist"></ul>
+  <h1>📺 Playlistismo TV</h1>
+
+  <div id="player-container">
+    <div id="player"></div>
+    <div id="credits"></div>
+  </div>
+
+  <div id="tv-controls">
+    <button onclick="prevVideo()">⏮</button>
+    <button onclick="togglePlay()">⏯</button>
+    <button onclick="nextVideo()">⏭</button>
+  </div>
 
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxy_NWiEQ80hbY4zLzW1CgItdXB4huXmcptw_qTADchS1fSIKS7yWrN6Ll-BlNEjJPw/exec?action=getPlaylist';
-    let videos = [];
-    let player;
+  let player;
+  let videos = [];
+  let currentIndex = 0;
 
-    async function fetchPlaylist() {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      if (data.ok && data.items.length > 0) {
-        videos = data.items;
-        renderList();
-      } else {
-        console.error("Erro ao carregar playlist:", data.error);
-      }
+  async function fetchVideos() {
+    const url = 'https://script.google.com/macros/s/SEU_DEPLOY_ID_AQUI/exec?action=getPlaylist';
+    const res = await fetch(url);
+    videos = await res.json();
+    initPlayer();
+  }
+
+  function initPlayer() {
+    player = new YT.Player('player', {
+      height: '480',
+      width: '100%',
+      videoId: videos[0].videoId,
+      playerVars: { rel: 0, modestbranding: 1, controls: 0 },
+      events: { 'onStateChange': onPlayerStateChange }
+    });
+    showCredits(videos[0]);
+  }
+
+  function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+      const currentId = player.getVideoData().video_id;
+      const video = videos.find(v => v.videoId === currentId);
+      if (video) showCredits(video);
     }
+  }
 
-    function renderList() {
-      const ul = document.getElementById('playlist');
-      ul.innerHTML = '';
-      videos.forEach(v => {
-        const li = document.createElement('li');
-        li.textContent = v.title;
-        li.onclick = () => player.loadVideoById(v.videoId);
-        ul.appendChild(li);
-      });
-    }
+  function showCredits(video) {
+    const el = document.getElementById('credits');
+    const c = video.credits;
+    el.innerHTML = `
+      <strong>${c.musica || video.title}</strong><br>
+      ${c.artista ? `🎤 ${c.artista}<br>` : ''}
+      ${c.album ? `💽 ${c.album}<br>` : ''}
+      ${c.ano ? `📅 ${c.ano}<br>` : ''}
+      ${c.diretor ? `🎬 ${c.diretor}` : ''}
+    `;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 5000);
+  }
 
-    function onYouTubeIframeAPIReady() {
-      if (videos.length === 0) return; // aguarda fetch
-      player = new YT.Player('player', {
-        height: '450',
-        width: '80%',
-        videoId: videos[0].videoId,
-        playerVars: { rel: 0, modestbranding: 1 },
-      });
-    }
+  function nextVideo() {
+    currentIndex = (currentIndex + 1) % videos.length;
+    const next = videos[currentIndex];
+    player.loadVideoById(next.videoId);
+    showCredits(next);
+  }
 
-    async function init() {
-      await fetchPlaylist();
-      if (window.YT && window.YT.Player) {
-        onYouTubeIframeAPIReady();
-      } else {
-        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-      }
-    }
+  function prevVideo() {
+    currentIndex = (currentIndex - 1 + videos.length) % videos.length;
+    const prev = videos[currentIndex];
+    player.loadVideoById(prev.videoId);
+    showCredits(prev);
+  }
 
-    init();
+  function togglePlay() {
+    const state = player.getPlayerState();
+    if (state === YT.PlayerState.PLAYING) player.pauseVideo();
+    else player.playVideo();
+  }
+
+  function onYouTubeIframeAPIReady() {
+    fetchVideos();
+  }
   </script>
 </body>
 </html>

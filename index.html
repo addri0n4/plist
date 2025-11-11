@@ -103,7 +103,7 @@ h1 {
   let currentIndex = 0;
 
   async function fetchVideos() {
-    const url = 'https://script.google.com/macros/s/SEU_DEPLOY_ID_AQUI/exec?action=getPlaylist';
+    const url = 'https://script.google.com/macros/s/AKfycbxy_NWiEQ80hbY4zLzW1CgItdXB4huXmcptw_qTADchS1fSIKS7yWrN6Ll-BlNEjJPw/exec?action=getPlaylist';
     const res = await fetch(url);
     videos = await res.json();
     initPlayer();

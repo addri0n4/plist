@@ -2,105 +2,100 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Playlistismo – Player de Créditos</title>
+  <title>Playlistismo Player</title>
   <style>
     body {
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
+      background: #0e0e0e;
+      color: #eee;
+      font-family: "Helvetica Neue", sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
+      margin: 0;
     }
-    #player { width: 640px; height: 360px; margin-top: 20px; }
-    #credits {
-      margin-top: 20px;
-      background: rgba(255,255,255,0.1);
-      padding: 10px 20px;
-      border-radius: 10px;
-      text-align: center;
-      transition: opacity 0.5s;
+    #player {
+      width: 80%;
+      height: 450px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
     }
-    .hidden { opacity: 0; }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      width: 80%;
+      max-height: 250px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      border-radius: 12px;
+    }
+    li {
+      padding: 10px 15px;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    li:hover {
+      background: #292929;
+    }
   </style>
 </head>
 <body>
-  <h1>🎬 Playlistismo</h1>
   <div id="player"></div>
-  <div id="credits" class="hidden">
-    <p><strong id="music"></strong> — <span id="artist"></span></p>
-    <p><em id="album"></em> (<span id="year"></span>)</p>
-    <p>🎬 <span id="director"></span></p>
-  </div>
+  <ul id="playlist"></ul>
 
   <script src="https://www.youtube.com/iframe_api"></script>
   <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSEU_ID_AQUI/exec';
-    const PLAYLIST_ID = 'PLEsPxCgw-KMdj-Z_fzWIkyuI-GLHUuPOp';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxy_NWiEQ80hbY4zLzW1CgItdXB4huXmcptw_qTADchS1fSIKS7yWrN6Ll-BlNEjJPw/exec?action=getPlaylist';
     let videos = [];
     let player;
-    let currentIndex = 0;
 
     async function fetchPlaylist() {
-      const res = await fetch(`${APPS_SCRIPT_URL}?action=playlist&playlistId=${PLAYLIST_ID}`);
+      const res = await fetch(API_URL);
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
-      videos = data.items;
-      console.log(`Carregados ${videos.length} vídeos`);
-    }
-
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
-        height: '360',
-        width: '640',
-        videoId: '',
-        events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
-      });
-    }
-
-    function onPlayerReady() {
-      loadVideo(0);
-    }
-
-    function onPlayerStateChange(event) {
-      if (event.data === YT.PlayerState.ENDED) {
-        nextVideo();
+      if (data.ok && data.items.length > 0) {
+        videos = data.items;
+        renderList();
+      } else {
+        console.error("Erro ao carregar playlist:", data.error);
       }
     }
 
-    function loadVideo(index) {
-      if (index >= videos.length) index = 0;
-      currentIndex = index;
-      const v = videos[index];
-      player.loadVideoById(v.videoId);
-      loadCredits(v.videoId);
+    function renderList() {
+      const ul = document.getElementById('playlist');
+      ul.innerHTML = '';
+      videos.forEach(v => {
+        const li = document.createElement('li');
+        li.textContent = v.title;
+        li.onclick = () => player.loadVideoById(v.videoId);
+        ul.appendChild(li);
+      });
     }
 
-    function nextVideo() {
-      loadVideo((currentIndex + 1) % videos.length);
+    function onYouTubeIframeAPIReady() {
+      if (videos.length === 0) return; // aguarda fetch
+      player = new YT.Player('player', {
+        height: '450',
+        width: '80%',
+        videoId: videos[0].videoId,
+        playerVars: { rel: 0, modestbranding: 1 },
+      });
     }
 
-    async function loadCredits(videoId) {
-      const res = await fetch(`${APPS_SCRIPT_URL}?videoId=${videoId}`);
-      const data = await res.json();
-      if (!data.ok) return;
-
-      const row = data.row;
-      document.getElementById('music').textContent = row['🎼 musica'] || '(sem título)';
-      document.getElementById('artist').textContent = row['🎤 artista'] || '';
-      document.getElementById('album').textContent = row['💽 album'] || '';
-      document.getElementById('year').textContent = row['📅 ano'] || '';
-      document.getElementById('director').textContent = row['🎬 diretor'] || '';
-      document.getElementById('credits').classList.remove('hidden');
-    }
-
-    (async () => {
+    async function init() {
       await fetchPlaylist();
-    })();
+      if (window.YT && window.YT.Player) {
+        onYouTubeIframeAPIReady();
+      } else {
+        window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
